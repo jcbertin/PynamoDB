@@ -188,11 +188,11 @@ class MetaModel(AttributeContainerMeta):
                         setattr(attr_obj, 'aws_access_key_id', None)
                     if not hasattr(attr_obj, 'aws_secret_access_key'):
                         setattr(attr_obj, 'aws_secret_access_key', None)
-                elif issubclass(attr_obj.__class__, (Index, )):
+                elif issubclass(attr_obj.__class__, (Index,)):
                     attr_obj.Meta.model = cls
                     if not hasattr(attr_obj.Meta, "index_name"):
                         attr_obj.Meta.index_name = attr_name
-                elif issubclass(attr_obj.__class__, (Attribute, )):
+                elif issubclass(attr_obj.__class__, (Attribute,)):
                     if attr_obj.attr_name is None:
                         attr_obj.attr_name = attr_name
 
@@ -205,7 +205,7 @@ class MetaModel(AttributeContainerMeta):
                 exception_attrs = {'__module__': attrs.get('__module__')}
                 if hasattr(cls, '__qualname__'):  # On Python 3, Model.DoesNotExist
                     exception_attrs['__qualname__'] = '{}.{}'.format(cls.__qualname__, 'DoesNotExist')
-                cls.DoesNotExist = type('DoesNotExist', (DoesNotExist, ), exception_attrs)
+                cls.DoesNotExist = type('DoesNotExist', (DoesNotExist,), exception_attrs)
 
 
 @add_metaclass(MetaModel)
@@ -631,6 +631,8 @@ class Model(AttributeContainer):
         :param page_size: Page size of the query to DynamoDB
         :param filters: A dictionary of filters to be used in the query
         """
+        if limit is not None and limit <= 0:
+            raise ValueError("Invalid 'limit' parameter")
         cls._conditional_operator_check(conditional_operator)
         cls._get_indexes()
         if index_name:
@@ -782,6 +784,8 @@ class Model(AttributeContainer):
         :param filters: A list of item filters
         :param consistent_read: If True, a consistent read is performed
         """
+        if limit is not None and limit <= 0:
+            raise ValueError("Invalid 'limit' parameter")
         cls._conditional_operator_check(conditional_operator)
         key_filter, scan_filter = cls._build_filters(
             SCAN_OPERATOR_MAP,
@@ -1190,7 +1194,7 @@ class Model(AttributeContainer):
         serialized = self._serialize(null_check=null_check)
         hash_key = serialized.get(HASH)
         range_key = serialized.get(RANGE, None)
-        args = (hash_key, )
+        args = (hash_key,)
         if range_key is not None:
             kwargs[pythonic(RANGE_KEY)] = range_key
         if attributes:

@@ -11,7 +11,7 @@ import warnings
 from six import add_metaclass
 from pynamodb.exceptions import DoesNotExist, TableDoesNotExist, TableError
 from pynamodb.throttle import NoThrottle
-from pynamodb.attributes import Attribute, AttributeContainer, MapAttribute, ListAttribute
+from pynamodb.attributes import Attribute, AttributeContainer, MapAttribute, ListAttribute, UnicodeSetAttribute
 from pynamodb.connection.base import MetaTable
 from pynamodb.connection.table import TableConnection
 from pynamodb.connection.util import pythonic
@@ -232,6 +232,48 @@ class Model(AttributeContainer):
                 )
             attrs[self._dynamo_to_python_attr(range_keyname)] = range_key
         self._set_attributes(**attrs)
+
+    @classmethod
+    def fix_unicode_set_attributes(cls,
+                                   get_save_kwargs,
+                                   read_capacity_to_consume_per_second=10,
+                                   max_sleep_between_retry=10,
+                                   max_consecutive_exceptions=30):
+        """
+        This function performs a rate limited scan of the table and re-serializes any UnicodeSetAttributes.
+
+        See https://github.com/pynamodb/PynamoDB/issues/377 for why this is necessary.
+
+        :param get_save_kwargs: A callback function that is passed a model and should return the kwargs
+            used when conditionally saving the item
+        :param read_capacity_to_consume_per_second: Amount of read capacity to consume
+            every second
+        :param max_sleep_between_retry: Max value for sleep in seconds in between scans during
+            throttling/rate limit scenarios
+        :param max_consecutive_exceptions: Max number of consecutive provision throughput exceeded
+            exceptions for scan to exit
+        """
+
+        if not cls._has_unicode_set_attribute():
+            return
+
+        items = cls.rate_limited_scan(
+            read_capacity_to_consume_per_second=read_capacity_to_consume_per_second,
+            max_sleep_between_retry=max_sleep_between_retry,
+            max_consecutive_exceptions=max_consecutive_exceptions
+        )
+        for item in items:
+            save_kwargs = get_save_kwargs(item)
+            item.save(**save_kwargs)
+
+    @classmethod
+    def _has_unicode_set_attribute(cls):
+        for attr_value in cls._get_attributes().values():
+            if isinstance(attr_value, UnicodeSetAttribute):
+                return True
+            if isinstance(attr_value, MapAttribute):
+                return attr_value._has_unicode_set_attribute()
+        return False
 
     @classmethod
     def has_map_or_list_attributes(cls):

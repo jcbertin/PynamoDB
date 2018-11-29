@@ -1170,10 +1170,13 @@ class Connection(object):
                         consistent_read=consistent_read,
                         index_name=index_name
                     )
-                    for item in data.get(ITEMS):
-                        yield item
-
-                        if limit is not None:
+                    if limit is None:
+                        # Fast path
+                        for item in data.get(ITEMS):
+                            yield item
+                    else:
+                        for item in data.get(ITEMS):
+                            yield item
                             limit -= 1
                             if not limit:
                                 return

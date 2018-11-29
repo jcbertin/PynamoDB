@@ -552,6 +552,9 @@ class Model(AttributeContainer):
             if filters:
                 raise ValueError('A hash_key must be given to use filters')
             return cls.describe_table().get(ITEM_COUNT)
+        if limit is not None:
+            if limit < 0:
+                raise ValueError('limit cannot be negative')
 
         cls._get_indexes()
         if index_name:
@@ -633,9 +636,7 @@ class Model(AttributeContainer):
         """
         if limit is not None:
             if limit < 0:
-                raise ValueError("Invalid 'limit' parameter")
-            elif not limit:
-                return
+                raise ValueError('limit cannot be negative')
         cls._conditional_operator_check(conditional_operator)
         cls._get_indexes()
         if index_name:
@@ -731,7 +732,7 @@ class Model(AttributeContainer):
         """
         if limit is not None:
             if limit < 0:
-                raise ValueError("Invalid 'limit' parameter")
+                raise ValueError('limit cannot be negative')
             elif not limit:
                 return
         cls._conditional_operator_check(conditional_operator)
@@ -793,9 +794,7 @@ class Model(AttributeContainer):
         """
         if limit is not None:
             if limit < 0:
-                raise ValueError("Invalid 'limit' parameter")
-            elif not limit:
-                return
+                raise ValueError('limit cannot be negative')
         cls._conditional_operator_check(conditional_operator)
         key_filter, scan_filter = cls._build_filters(
             SCAN_OPERATOR_MAP,

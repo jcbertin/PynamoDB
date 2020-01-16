@@ -20,20 +20,18 @@ from pynamodb.indexes import Index, GlobalSecondaryIndex
 from pynamodb.pagination import ResultIterator
 from pynamodb.constants import (
     ATTR_TYPE_MAP, ATTR_DEFINITIONS, ATTR_NAME, ATTR_TYPE, KEY_SCHEMA,
-    KEY_TYPE, ITEM, ITEMS, READ_CAPACITY_UNITS, WRITE_CAPACITY_UNITS, CAMEL_COUNT,
+    KEY_TYPE, ITEM, READ_CAPACITY_UNITS, WRITE_CAPACITY_UNITS,
     RANGE_KEY, ATTRIBUTES, PUT, DELETE, RESPONSES, QUERY_FILTER_OPERATOR_MAP,
     INDEX_NAME, PROVISIONED_THROUGHPUT, PROJECTION, ATTR_UPDATES, ALL_NEW,
     GLOBAL_SECONDARY_INDEXES, LOCAL_SECONDARY_INDEXES, ACTION, VALUE, KEYS,
     PROJECTION_TYPE, NON_KEY_ATTRIBUTES, COMPARISON_OPERATOR, ATTR_VALUE_LIST,
     TABLE_STATUS, ACTIVE, RETURN_VALUES, BATCH_GET_PAGE_LIMIT, UNPROCESSED_KEYS,
-    PUT_REQUEST, DELETE_REQUEST, LAST_EVALUATED_KEY, QUERY_OPERATOR_MAP, NOT_NULL,
-    SCAN_OPERATOR_MAP, CONSUMED_CAPACITY, BATCH_WRITE_PAGE_LIMIT, TABLE_NAME,
-    TAGS, NEXT_TOKEN, CAPACITY_UNITS, META_CLASS_NAME, EXISTS, NULL,
+    PUT_REQUEST, DELETE_REQUEST, QUERY_OPERATOR_MAP, NOT_NULL, SCAN_OPERATOR_MAP,
+    BATCH_WRITE_PAGE_LIMIT, TAGS, NEXT_TOKEN, META_CLASS_NAME, EXISTS, NULL,
     DELETE_FILTER_OPERATOR_MAP, UPDATE_FILTER_OPERATOR_MAP, PUT_FILTER_OPERATOR_MAP,
     COUNT, ITEM_COUNT, KEY, UNPROCESSED_ITEMS, STREAM_VIEW_TYPE, STREAM_SPECIFICATION,
     STREAM_ENABLED, EQ, NE, BINARY_SET, STRING_SET, NUMBER_SET,
-    META_ATTRIBUTES)
-
+    META_ATTRIBUTES, OBSOLETE_META_ATTRIBUTES)
 
 log = logging.getLogger(__name__)
 log.addHandler(NullHandler())
@@ -59,6 +57,7 @@ class BatchWrite(ModelContextManager):
     """
     A class for batch writes
     """
+
     def save(self, put_item):
         """
         This adds `put_item` to the list of pending operations to be performed.
@@ -167,6 +166,7 @@ class MetaModel(AttributeContainerMeta):
     This class is just here so that index queries have nice syntax.
     Model.index.query()
     """
+
     def __init__(self, name, bases, attrs):
         super(MetaModel, self).__init__(name, bases, attrs)
         if isinstance(attrs, dict):
@@ -175,6 +175,9 @@ class MetaModel(AttributeContainerMeta):
                     for meta_attr in META_ATTRIBUTES:
                         if not hasattr(attr_obj, meta_attr):
                             setattr(attr_obj, meta_attr, None)
+                    for meta_attr in OBSOLETE_META_ATTRIBUTES:
+                        if hasattr(attr_obj, meta_attr):
+                            warnings.warn("The `%s` option is no longer supported" % meta_attr)
                 elif issubclass(attr_obj.__class__, (Index,)):
                     attr_obj.Meta.model = self
                     if not hasattr(attr_obj.Meta, "index_name"):
@@ -1179,7 +1182,7 @@ class Model(AttributeContainer):
                 pythonic(ATTR_DEFINITIONS): []
             }
             cls._index_classes = {}
-            for name, index in getmembers_issubclass(cls, Index):
+            for _, index in getmembers_issubclass(cls, Index):
                 cls._index_classes[index.Meta.index_name] = index
                 schema = index._get_schema()
                 idx = {
@@ -1327,10 +1330,12 @@ class Model(AttributeContainer):
             cls._connection = TableConnection(cls.Meta.table_name,
                                               region=cls.Meta.region,
                                               host=cls.Meta.host,
-                                              session_cls=cls.Meta.session_cls,
-                                              request_timeout_seconds=cls.Meta.request_timeout_seconds,
+                                              connect_timeout_seconds=cls.Meta.connect_timeout_seconds,
+                                              read_timeout_seconds=cls.Meta.read_timeout_seconds,
                                               max_retry_attempts=cls.Meta.max_retry_attempts,
                                               base_backoff_ms=cls.Meta.base_backoff_ms,
+                                              max_pool_connections=cls.Meta.max_pool_connections,
+                                              extra_headers=cls.Meta.extra_headers,
                                               aws_access_key_id=cls.Meta.aws_access_key_id,
                                               aws_secret_access_key=cls.Meta.aws_secret_access_key,
                                               settings=cls.Meta.settings)

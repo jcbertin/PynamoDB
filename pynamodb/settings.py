@@ -1,27 +1,37 @@
-import imp
+import sys
 import logging
 import os
+import warnings
 import threading
 from os import getenv
 from six import add_metaclass
 
 from botocore.session import Session
-from botocore.vendored import requests
 
 from pynamodb.constants import (
-    REGION, SESSION_CLS, REQUEST_TIMEOUT_SECONDS, BASE_BACKOFF_MS,
-    MAX_RETRY_ATTEMPTS, ALLOW_RATE_LIMITED_SCAN_WITHOUT_CONSUMED_CAPACITY
+    REGION, CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS, BASE_BACKOFF_MS, MAX_RETRY_ATTEMPTS,
+    MAX_POOL_CONNECTIONS, ALLOW_RATE_LIMITED_SCAN_WITHOUT_CONSUMED_CAPACITY, OBSOLETE_META_ATTRIBUTES
 )
 
-
 DEFAULT_SETTINGS = {
-    REQUEST_TIMEOUT_SECONDS: 60,
+    CONNECT_TIMEOUT_SECONDS: 15,
+    READ_TIMEOUT_SECONDS: 30,
     MAX_RETRY_ATTEMPTS: 3,
+    MAX_POOL_CONNECTIONS: 10,
     BASE_BACKOFF_MS: 25,
     REGION: 'us-east-1',
-    SESSION_CLS: requests.Session,
     ALLOW_RATE_LIMITED_SCAN_WITHOUT_CONSUMED_CAPACITY: False
 }
+
+
+def _load_module(name, path):
+    """Load module using the Python version compatible function."""
+    if sys.version_info >= (3, 3):
+        from importlib.machinery import SourceFileLoader
+        return SourceFileLoader(name, path).load_module()
+    else:
+        from imp import load_source
+        return load_source(name, path)
 
 
 class SettingsMeta(type):
@@ -76,7 +86,10 @@ class Settings(object):
         if not settings_path:
             settings_path = getenv('PYNAMODB_CONFIG', '/etc/pynamodb/global_default_settings.py')
         if os.path.isfile(settings_path):
-            self._override_settings = imp.load_source('__pynamodb_override_settings__', settings_path)
+            self._override_settings = _load_module('__pynamodb_override_settings__', settings_path)
+            for meta_attr in OBSOLETE_META_ATTRIBUTES:
+                if hasattr(self._override_settings, meta_attr):
+                    warnings.warn("The `%s` option is no longer supported" % meta_attr)
             log.info('Override settings for pynamo available {0}'.format(settings_path))
         else:
             self._override_settings = None

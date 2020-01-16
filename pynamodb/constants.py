@@ -220,7 +220,6 @@ DELETE_FILTER_OPERATOR_MAP = SCAN_OPERATOR_MAP
 UPDATE_FILTER_OPERATOR_MAP = SCAN_OPERATOR_MAP
 PUT_FILTER_OPERATOR_MAP = SCAN_OPERATOR_MAP
 
-
 # These are the valid comparison operators for the Scan operation
 # See: http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html#DDB-Scan-request-ScanFilter
 SEGMENT = 'Segment'
@@ -243,7 +242,6 @@ FILTER_EXPRESSION_OPERATOR_MAP = {
     IN: 'is_in',
     BETWEEN: 'between'
 }
-
 
 # These are constants used in the expected condition for PutItem
 # See: http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_PutItem.html#DDB-PutItem-request-Expected
@@ -303,9 +301,15 @@ NEXT_TOKEN = 'NextToken'
 SETTINGS = 'settings'
 SESSION_CLS = 'session_cls'
 REQUEST_TIMEOUT_SECONDS = 'request_timeout_seconds'
+CONNECT_TIMEOUT_SECONDS = 'connect_timeout_seconds'
+READ_TIMEOUT_SECONDS = 'read_timeout_seconds'
 BASE_BACKOFF_MS = 'base_backoff_ms'
 MAX_RETRY_ATTEMPTS = 'max_retry_attempts'
+MAX_POOL_CONNECTIONS = 'max_pool_connections'
+EXTRA_HEADERS = 'extra_headers'
 AWS_ACCESS_KEY_ID = 'aws_access_key_id'
 AWS_SECRET_ACCESS_KEY = 'aws_secret_access_key'
 ALLOW_RATE_LIMITED_SCAN_WITHOUT_CONSUMED_CAPACITY = 'allow_rate_limited_scan_without_consumed_capacity'
-META_ATTRIBUTES = frozenset((SETTINGS, REGION, HOST, SESSION_CLS, REQUEST_TIMEOUT_SECONDS, BASE_BACKOFF_MS, MAX_RETRY_ATTEMPTS, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY))
+META_ATTRIBUTES = frozenset((SETTINGS, REGION, HOST, CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS, BASE_BACKOFF_MS,
+                             MAX_RETRY_ATTEMPTS, MAX_POOL_CONNECTIONS, EXTRA_HEADERS, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY))
+OBSOLETE_META_ATTRIBUTES = frozenset((SESSION_CLS, REQUEST_TIMEOUT_SECONDS))
